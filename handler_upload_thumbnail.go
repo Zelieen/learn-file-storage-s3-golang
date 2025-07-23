@@ -63,5 +63,19 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusUnauthorized, "User is not the owner of the video", err)
 	}
 
-	respondWithJSON(w, http.StatusOK, struct{}{})
+	// add the thumbnail
+	videoThumbnails[videoID] = thumbnail{
+		data:      data,
+		mediaType: mediaType,
+	}
+
+	// update the thumbnail in the database
+	newThumbnailURL := fmt.Sprintf("http://localhost:<port>/api/thumbnails/%s", videoIDString)
+	video.ThumbnailURL = &newThumbnailURL
+	err = cfg.db.UpdateVideo(video)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not update thumbnail in database", err)
+	}
+
+	respondWithJSON(w, http.StatusOK, video)
 }
