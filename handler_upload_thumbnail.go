@@ -70,7 +70,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 
 	// update the thumbnail in the database
-	newThumbnailURL := fmt.Sprintf("http://localhost:<port>/api/thumbnails/%s", videoIDString)
+	newThumbnailURL := fmt.Sprintf("http://localhost:%s/api/thumbnails/%s", cfg.port, videoIDString)
 	video.ThumbnailURL = &newThumbnailURL
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
