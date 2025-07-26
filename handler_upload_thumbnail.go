@@ -1,10 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -41,19 +43,16 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 
 	// "thumbnail" should match the HTML form input name
-	file, header, err := r.FormFile("thumbnail")
+	fileUpload, header, err := r.FormFile("thumbnail")
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Unable to parse form file", err)
 		return
 	}
-	defer file.Close()
+	defer fileUpload.Close()
 
 	// read the data
 	mediaType := header.Header.Get("Content-Type")
-	data, err := io.ReadAll(file)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unable to read from file", err)
-	}
+	extension := strings.Split(mediaType, "/")[1]
 
 	// call metadata from database
 	video, err := cfg.db.GetVideo(videoID)
@@ -64,10 +63,22 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusUnauthorized, "User is not the owner of the video", err)
 	}
 
+	// create a file
+	filePath := filepath.Join(cfg.assetsRoot, videoIDString)
+	assetFile, err := os.Create(fmt.Sprintf("%s.%s", filePath, extension))
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Could not create file", err)
+	}
+	defer assetFile.Close()
+
+	_, err = io.Copy(assetFile, fileUpload)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Could not copy file to system", err)
+	}
+
 	// update the thumbnail in the database
-	dataString := base64.StdEncoding.EncodeToString(data)
-	dataURL := fmt.Sprintf("data:%s;base64,%s", mediaType, dataString)
-	video.ThumbnailURL = &dataURL
+	assetURL := fmt.Sprintf("http://localhost:%s/assets/%s.%s", cfg.port, videoIDString, extension)
+	video.ThumbnailURL = &assetURL
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not update thumbnail in database", err)
