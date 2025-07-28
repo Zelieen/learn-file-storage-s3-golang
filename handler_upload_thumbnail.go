@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -63,8 +65,14 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusUnauthorized, "User is not the owner of the video", err)
 	}
 
+	// create a name for the thumbnail
+	bytes := make([]byte, 32)
+	rand.Read(bytes)
+	thumbnailName := base64.RawURLEncoding.EncodeToString(bytes)
+	//
+
 	// create a file
-	filePath := filepath.Join(cfg.assetsRoot, videoIDString)
+	filePath := filepath.Join(cfg.assetsRoot, thumbnailName)
 	assetFile, err := os.Create(fmt.Sprintf("%s.%s", filePath, extension))
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Could not create file", err)
@@ -77,7 +85,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 
 	// update the thumbnail in the database
-	assetURL := fmt.Sprintf("http://localhost:%s/assets/%s.%s", cfg.port, videoIDString, extension)
+	assetURL := fmt.Sprintf("http://localhost:%s/assets/%s.%s", cfg.port, thumbnailName, extension)
 	video.ThumbnailURL = &assetURL
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
