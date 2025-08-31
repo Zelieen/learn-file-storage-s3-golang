@@ -69,7 +69,6 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
 	thumbnailName := base64.RawURLEncoding.EncodeToString(bytes)
-	//
 
 	// create a file
 	filePath := filepath.Join(cfg.assetsRoot, thumbnailName)
