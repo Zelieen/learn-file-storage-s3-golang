@@ -23,6 +23,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	//validate user
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldn't find JWT", err)
@@ -63,6 +64,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusBadRequest, "File is not an mp4", err)
 	}
 
+	//temporarily save upload file to disk
 	temp, err := os.CreateTemp("", "tubely-temp-upload.mp4")
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to create temporary upload file", err)
@@ -83,4 +85,14 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		Body:        temp,
 		ContentType: &mediatype,
 	})
+
+	// update the videoURL in the database
+	assetURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, fileKey)
+	video.VideoURL = &assetURL
+	err = cfg.db.UpdateVideo(video)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not update videoURL in database", err)
+	}
+
+	respondWithJSON(w, http.StatusOK, video)
 }
