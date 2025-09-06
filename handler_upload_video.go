@@ -73,18 +73,30 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	defer os.Remove(temp.Name())
 	defer temp.Close()
 
-	io.Copy(temp, fileUpload)
-	temp.Seek(0, io.SeekStart)
+	if _, err := io.Copy(temp, fileUpload); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not write file to disk", err)
+		return
+	}
+
+	_, err = temp.Seek(0, io.SeekStart)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not reset file pointer", err)
+		return
+	}
 
 	//now put file to S3
 	fileKey := fmt.Sprintf("%s.mp4", videoIDString)
 
-	cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
+	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &fileKey,
 		Body:        temp,
 		ContentType: &mediatype,
 	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error uploading file to S3", err)
+		return
+	}
 
 	// update the videoURL in the database
 	assetURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, fileKey)
