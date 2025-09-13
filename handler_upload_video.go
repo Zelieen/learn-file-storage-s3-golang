@@ -16,6 +16,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	const maxUpload = 1 << 30 // bit shift to 1 GB
 	http.MaxBytesReader(w, r.Body, maxUpload)
 
+	//validate videoID
 	videoIDString := r.PathValue("videoID")
 	videoID, err := uuid.Parse(videoIDString)
 	if err != nil {
