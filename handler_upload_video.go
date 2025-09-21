@@ -130,19 +130,12 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 
 	// update the videoURL in the database
-	//assetURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, fileKey) <-- old unsigned public URL logic
-	assetURL := fmt.Sprintf("%s,%s", cfg.s3Bucket, fileKey)
+	assetURL := fmt.Sprintf("https://%s/%s", cfg.s3CfDistribution, fileKey)
 	video.VideoURL = &assetURL
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not update videoURL in database", err)
 	}
 
-	// replace URL in video for response
-	respondVideo, err := cfg.dbVideoToSignedVideo(video)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Could not generate signed video URL", err)
-	}
-
-	respondWithJSON(w, http.StatusOK, respondVideo)
+	respondWithJSON(w, http.StatusOK, video)
 }
