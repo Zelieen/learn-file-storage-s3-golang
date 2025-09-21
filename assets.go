@@ -75,9 +75,9 @@ func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime ti
 }
 
 func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error) {
-	parts := strings.Split(fmt.Sprint(video.VideoURL), ",")
+	parts := strings.Split(fmt.Sprint(*video.VideoURL), ",")
 	if len(parts) != 2 {
-		return video, fmt.Errorf("Unexpected length of video URL list: found %d, expected 2", len(parts))
+		return video, fmt.Errorf("unexpected length of video URL list: found %d, expected 2. Prints VideoURL: %s", len(parts), *video.VideoURL)
 	}
 	bucket, key := parts[0], parts[1]
 
@@ -85,6 +85,6 @@ func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video
 	if err != nil {
 		return video, err
 	}
-	video.ThumbnailURL = &signedURL
+	video.VideoURL = &signedURL
 	return video, nil
 }
